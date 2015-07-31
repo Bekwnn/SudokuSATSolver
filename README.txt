@@ -15,3 +15,15 @@ OutFile.txt, OutFile(1).txt, OutFile(2).txt, etc
 
 comments of clause constructors taken and modified from
 http://www.cs.qub.ac.uk/~I.Spence/SuDoku/SuDoku.html
+
+COMMENTS ABOUT THE ASSIGNMENT:
+I was not able to test any of my outputs since I do not have a linux install,
+was unable to get ANY SAT solver I found working on windows, and I was unable to
+make/install any SAT solver in the linux labs since they required administrative privileges.
+Between my issues in this, the fact that I am working alone on a 3 person project, and the minor features
+I implemented to the program, I'm hoping I can be awarded some marks beyond the basic task marks.
+
+I attempted to use the two SAT solvers (miniSAT, libsolv) which are included in my project folder
+The three methods I used to attempt to build them were:
+mingw32-make, MSYS make, and CYGWIN
+but encountered errors with all of them.
