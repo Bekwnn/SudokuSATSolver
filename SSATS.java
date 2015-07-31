@@ -21,7 +21,7 @@ public class SSATS {
 			return;
 		}
 		
-		if (args[2].equals("-GSAT")) isGSAT = true;	
+		if (args.length == 3 && args[2].equals("-GSAT")) isGSAT = true;	
 		
 		//using a hash map structure for storing the puzzle 
 		HashMap<String,Integer> puzzleMap = new HashMap<String,Integer>();
