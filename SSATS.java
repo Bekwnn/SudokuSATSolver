@@ -163,6 +163,8 @@ public class SSATS {
 				}
 			}
 		}
+		
+		//TODO: NEGATIVE ENCODINGS!!!
 	}
 	
 	private static void PreFilledCells(PrintWriter writer, HashMap<String,Integer> puzzleMap)
