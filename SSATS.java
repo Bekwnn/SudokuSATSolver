@@ -173,7 +173,17 @@ public class SSATS {
 			}
 		}
 		
-		//TODO: NEGATIVE ENCODINGS!!!
+		//negative encodings
+		for (int i = 0; i < SUDOKU_SIZE; i++) {
+			for (int j = 0; j < SUDOKU_SIZE; j++) {
+				for (int x = 0; x < SUDOKU_SIZE; x++) {  //the value
+					for (int y = x+1; y < SUDOKU_SIZE; y++) {
+						 writer.print("-" + (i+1) + (j+1) + (x+1) + " -" + (i+1) + (j+1) + (y+1) + " ");
+						 EndClause(writer);
+					}
+				}
+			}
+		}
 	}
 	
 	private static void RowClauses(PrintWriter writer)
@@ -189,8 +199,8 @@ public class SSATS {
 
 		This is repeated for the values in the range 2 to 9. 
 		*/
-		for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
-			for (int i = 0; i < SUDOKU_SIZE; i++) {	    //the row
+		for (int x = 0; x < SUDOKU_SIZE; x++) {                 //the value
+			for (int i = 0; i < SUDOKU_SIZE; i++) {         //the row
 				for (int j = 0; j < SUDOKU_SIZE; j++) { //the column
 					writer.print("" + (i+1) + (j+1) + (x+1) + " ");
 				}	
@@ -198,7 +208,17 @@ public class SSATS {
 			}
 		}
 		
-		//TODO: NEGATIVE ENCODINGS!!!
+		//negative encodings
+		for (int i = 0; i < SUDOKU_SIZE; i++) {                 //the row
+			for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
+				for (int j = 0; j < SUDOKU_SIZE; j++) { //the column
+					for (int y = j+1; y < SUDOKU_SIZE; y++) {
+						 writer.print("-" + (i+1) + (j+1) + (x+1) + " -" + (i+1) + (y+1) + (x+1) + " ");
+						 EndClause(writer);
+					}
+				}
+			}
+		}
 	}
 	
 	private static void ColumnClauses(PrintWriter writer)
@@ -223,7 +243,17 @@ public class SSATS {
 			}
 		}
 		
-		//TODO: NEGATIVE ENCODINGS!!!
+		//negative encodings
+		for (int j = 0; j < SUDOKU_SIZE; j++) {                 //the row
+			for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
+				for (int i = 0; i < SUDOKU_SIZE; i++) { //the column
+					for (int y = i+1; y < SUDOKU_SIZE; y++) {
+						 writer.print("-" + (i+1) + (j+1) + (x+1) + " -" + (y+1) + (j+1) + (x+1) + " ");
+						 EndClause(writer);
+					}
+				}
+			}
+		}
 	}
 	
 	private static void BlockClauses(PrintWriter writer)
@@ -231,6 +261,10 @@ public class SSATS {
 		/*
 		Again, these are similar. For example to show that the top left block contains a 1, we need
 		111 121 131 211 221 231 311 321 331 0 
+		To show a block does not contain more than one 1, we need
+		-111 -211 0
+		-111 -311 0
+		-111 -121 0
 		*/
 		for (int x = 0; x < SUDOKU_SIZE; x++) {  //the value
 			for (int blocki = 0; blocki < SUDOKU_SIZE_SQRT; blocki++) {
@@ -245,7 +279,22 @@ public class SSATS {
 			}
 		}
 		
-		//TODO: NEGATIVE ENCODINGS!!!
+		//negative encodings
+		for (int x = 0; x < SUDOKU_SIZE; x++) {  //the value
+			for (int blocki = 0; blocki < SUDOKU_SIZE_SQRT; blocki++) {
+				for (int blockj = 0; blockj < SUDOKU_SIZE_SQRT; blockj++) {
+					for (int i = 0; i < SUDOKU_SIZE_SQRT; i++) {
+						for (int j = 0; j < SUDOKU_SIZE_SQRT; j++) {
+							for (int y = i*3+j+1; y < SUDOKU_SIZE; y++) {
+								writer.print("-" + (blocki*SUDOKU_SIZE_SQRT + i+1) + (blockj*SUDOKU_SIZE_SQRT + j+1) + (x+1) + 
+									      " -" + (blocki*SUDOKU_SIZE_SQRT + (y/3)+1) + (blockj*SUDOKU_SIZE_SQRT + (y%3)+1) + (x+1) + " ");
+								EndClause(writer);
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	private static void PreFilledCells(PrintWriter writer, HashMap<String,Integer> puzzleMap)
