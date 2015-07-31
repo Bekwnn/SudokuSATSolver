@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.Scanner;
+import java.util.Map;
 import java.util.HashMap;
 
 public class SSATS {
@@ -34,7 +35,7 @@ public class SSATS {
 					return;
 				}
 				
-				//PrintSudoku(myChar); //to view the map and debug
+				PrintSudoku(myChar); //to view the map and debug
 				
 				//fill map from input file
 				for (int x, i = 0; i < SUDOKU_SIZE; i++) {
@@ -81,7 +82,7 @@ public class SSATS {
 		}
 	}
 	
-	private static void IndividualCellClauses(writer)
+	private static void IndividualCellClauses(PrintWriter writer)
 	{
 		/*
 		Clauses have to be included to indicate that a cell contains exactly one value in the range 1 to 9. Consider the cell <1,1>. The clause
@@ -94,7 +95,7 @@ public class SSATS {
 		*/
 	}
 	
-	private static void RowClauses(writer)
+	private static void RowClauses(PrintWriter writer)
 	{
 		/*
 		In the same manner, to show that row 1 contains a 1, we need
@@ -107,13 +108,23 @@ public class SSATS {
 
 		This is repeated for the values in the range 2 to 9. 
 		*/
+		for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
+			for (int i = 0; i < SUDOKU_SIZE; i++) {	    //the row
+				for (int j = 0; j < SUDOKU_SIZE; j++) { //the column
+					System.out.print("" + (i+1) + (j+1) + (x+1) + " ");
+				}	
+				System.out.println("0");
+			}
+		}
+		
+		//TODO: NEGATIVE ENCODINGS!!!
 	}
 	
-	private static void ColumnClauses(writer)
+	private static void ColumnClauses(PrintWriter writer)
 	{
 		/*
 		In the same manner, to show that column 1 contains a 1, we need
-		111 211 311 411 5111 611 7111 8111 911 0
+		111 211 311 411 511 611 711 811 911 0
 		and to show that it contains a 2 we need
 		112 212 312 412 512 612 712 812 912 0
 		This is repeated for values 3 to 9. Then, to show that it does not contain more than one 1, we need
@@ -122,17 +133,39 @@ public class SSATS {
 
 		This is repeated for the values in the range 2 to 9. 
 		*/
+		for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
+			for (int i = 0; i < SUDOKU_SIZE; i++) {	    //the column
+				for (int j = 0; j < SUDOKU_SIZE; j++) { //the row
+					System.out.print("" + (j+1) + (i+1) + (x+1) + " ");
+				}	
+				System.out.println("0");
+			}
+		}
+		
+		//TODO: NEGATIVE ENCODINGS!!!
 	}
 	
-	private static void BlockClauses(writer)
+	private static void BlockClauses(PrintWriter writer)
 	{
 		/*
 		Again, these are similar. For example to show that the top left block contains a 1, we need
 		111 121 131 211 221 231 311 321 331 0 
 		*/
+		for (int x = 0; x < SUDOKU_SIZE; x++) {  //the value
+			for (int blocki = 0; blocki < SUDOKU_SIZE_SQRT; blocki++) {
+				for (int blockj = 0; blockj < SUDOKU_SIZE_SQRT; blockj++) {
+					for (int i = 0; i < SUDOKU_SIZE_SQRT; i++) {
+						for (int j = 0; j < SUDOKU_SIZE_SQRT; j++) {
+							System.out.print("" + (blocki*SUDOKU_SIZE_SQRT + i+1) + (blockj*SUDOKU_SIZE_SQRT + j+1) + (x+1) + " ");
+						}
+					}
+					System.out.println("0");
+				}
+			}
+		}
 	}
 	
-	private static void PreFilledCells(writer, puzzleMap)
+	private static void PreFilledCells(PrintWriter writer, HashMap<String,Integer> puzzleMap)
 	{
 		/*
 		This completes the clauses which are the same for every puzzle because they reflect the basic rules 
@@ -140,6 +173,15 @@ public class SSATS {
 		For example if cell <2,3> has to contain 4, we add the clause
 		234 0
 		*/
+		for (Map.Entry<String,Integer> entry : puzzleMap.entrySet())
+		{
+			if (entry.getValue() != 0)
+			{
+				String[] entryLocation = entry.getKey().substring(1,entry.getKey().length()-1).split(",");	//trims the brackets and splits at comma
+				String line = entryLocation[0]+entryLocation[1]+entry.getValue()+" 0";
+				System.out.println(line);
+			}
+		}
 	}
 	
 	//prints a char array as a formatted sudoku table
@@ -163,5 +205,6 @@ public class SSATS {
 			}
 			System.out.println();
 		}
+		System.out.println();
 	}
 }
