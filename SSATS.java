@@ -10,13 +10,18 @@ public class SSATS {
 	private static final int SUDOKU_SIZE_SQRT = (int)Math.sqrt(SUDOKU_SIZE);
 	
 	private static int clauseCount = 0;
+	private static boolean isGSAT = false;
 	
 	public static void main(String[] args) throws IOException {
 		//need to return if no file specified
-		if (args.length != 2) {
-			System.out.println("Usage: \"java SSATS inputfilename outputfilename\" (no .txt; extension assumed)");
+		if (args.length < 2) {
+			System.out.println("Usage: (don't add file extensions, txt assumed)");
+			System.out.println("java SSATS inputfilename outputfilename");
+			System.out.println("java SSATS inputfilename outputfilename -GSAT");
 			return;
 		}
+		
+		if (args[2].equals("-GSAT")) isGSAT = true;	
 		
 		//using a hash map structure for storing the puzzle 
 		HashMap<String,Integer> puzzleMap = new HashMap<String,Integer>();
@@ -24,7 +29,9 @@ public class SSATS {
 		
 		try {
 			s = new Scanner(new BufferedReader(new FileReader(args[0]+".txt")));
+			
 			int puzzleCount = 0;
+			
 			while (s.hasNext())
 			{
 				clauseCount = 0;	//reset clause count
@@ -58,10 +65,12 @@ public class SSATS {
 				if (puzzleCount > 0) outFileName += "("+puzzleCount+")";
 				outFileName += ".txt";
 				
-				GenerateSATCNF(puzzleMap, outFileName);
+				StringBuilder strBuilder = new StringBuilder();
 				
-				//now add the formatting to the start of the file
-				FormatPostPass(outFileName);
+				GenerateSATCNF(puzzleMap, strBuilder);
+				
+				//now add the formatting to the start of the file if not GSAT
+				FormatPostPass(strBuilder, outFileName);
 				
 				puzzleCount++;
 			}
@@ -72,37 +81,20 @@ public class SSATS {
 		}
 	}
 	
-	private static void GenerateSATCNF(HashMap<String,Integer> puzzleMap, String fileOutName)
+	private static void GenerateSATCNF(HashMap<String,Integer> puzzleMap, StringBuilder strBuilder)
 	{
-		try {
-			PrintWriter writer = new PrintWriter(fileOutName, "UTF-8");
-			
-			//writer.println("Individual Cell Clauses:");
-			IndividualCellClauses(writer);
-			
-			//writer.println("Row Clauses:");
-			RowClauses(writer);
-			
-			//writer.println("Column Clauses:");
-			ColumnClauses(writer);
-			
-			//writer.println("Block Clauses:");
-			BlockClauses(writer);
-			
-			//writer.println("PreFilled Clauses:");
-			PreFilledCells(writer, puzzleMap);
-			
-			//close the writer to save the file
-			writer.close();
-			
-		} catch (FileNotFoundException e) {
-			System.out.println("writer threw FileNotFound");
-		} catch (UnsupportedEncodingException e) {
-			System.out.println("writer threw UnsupportedEncodingException (UTF-8)");
-		}
+		IndividualCellClauses(strBuilder);
+		
+		RowClauses(strBuilder);
+		
+		ColumnClauses(strBuilder);
+		
+		BlockClauses(strBuilder);
+		
+		PreFilledCells(strBuilder, puzzleMap);
 	}
 	
-	private static void FormatPostPass(String fileOutName) throws IOException
+	private static void FormatPostPass(StringBuilder strBuilder, String fileOutName) throws IOException
 	{
 		/*
 		intro SAT formatting
@@ -116,34 +108,18 @@ public class SSATS {
 			-3 -4 0
 		*/
 		
-		//TODO: replace writer variable with a StringBuilder (and use it here as well)
-		
-		//read the file back and store it in a StringBuilder
-		Scanner s = null;
-		StringBuilder rebuilder = new StringBuilder();
-		try {
-			s = new Scanner(new BufferedReader(new FileReader(fileOutName)));
-			while (s.hasNextLine())
-			{	
-				rebuilder.append(s.nextLine());
-				rebuilder.append(System.getProperty("line.separator"));
-			}
-		} finally {
-			if (s != null) {
-				s.close();
-			}
-		}
-		
-		//write the formatting info then append the rest
+		//write the formatting info if !isGSAT, then append the rest
 		PrintWriter postWriter = null;
 		try {
 			postWriter = new PrintWriter(fileOutName, "UTF-8");
 			
-			postWriter.println("c This SAT solution was produced by Sudoku SAT Solver (SSATS),");
-			postWriter.println("c written by Evan Nickerson");
-			postWriter.println("p cnf " + (SUDOKU_SIZE_SQR*SUDOKU_SIZE) + " " + clauseCount);
+			if (!isGSAT) {
+				postWriter.println("c This SAT solution was produced by Sudoku SAT Solver (SSATS),");
+				postWriter.println("c written by Evan Nickerson");
+				postWriter.println("p cnf " + (SUDOKU_SIZE_SQR*SUDOKU_SIZE) + " " + clauseCount);
+			}
 			
-			postWriter.print(rebuilder.toString());
+			postWriter.print(strBuilder.toString());
 			
 			postWriter.close();
 		} catch (FileNotFoundException e) {
@@ -153,7 +129,7 @@ public class SSATS {
 		}
 	}
 	
-	private static void IndividualCellClauses(PrintWriter writer)
+	private static void IndividualCellClauses(StringBuilder strBuilder)
 	{
 		/*
 		Clauses have to be included to indicate that a cell contains exactly one value in the range 1 to 9. Consider the cell <1,1>. The clause
@@ -166,10 +142,11 @@ public class SSATS {
 		*/
 		for (int i = 0; i < SUDOKU_SIZE; i++) {         //the row
 			for (int j = 0; j < SUDOKU_SIZE; j++) {	    //the column
+				StringBuilder clause = new StringBuilder();
 				for (int x = 0; x < SUDOKU_SIZE; x++) { //the value
-					writer.print("" + (i+1) + (j+1) + (x+1) + " ");
+					clause.append("" + (i+1) + (j+1) + (x+1) + " ");
 				}	
-				EndClause(writer);
+				EndClause(strBuilder, clause);
 			}
 		}
 		
@@ -178,15 +155,16 @@ public class SSATS {
 			for (int j = 0; j < SUDOKU_SIZE; j++) {
 				for (int x = 0; x < SUDOKU_SIZE; x++) {  //the value
 					for (int y = x+1; y < SUDOKU_SIZE; y++) {
-						 writer.print("-" + (i+1) + (j+1) + (x+1) + " -" + (i+1) + (j+1) + (y+1) + " ");
-						 EndClause(writer);
+						StringBuilder clause = new StringBuilder();
+						clause.append("-" + (i+1) + (j+1) + (x+1) + " -" + (i+1) + (j+1) + (y+1) + " ");
+						EndClause(strBuilder, clause);
 					}
 				}
 			}
 		}
 	}
 	
-	private static void RowClauses(PrintWriter writer)
+	private static void RowClauses(StringBuilder strBuilder)
 	{
 		/*
 		In the same manner, to show that row 1 contains a 1, we need
@@ -201,10 +179,11 @@ public class SSATS {
 		*/
 		for (int x = 0; x < SUDOKU_SIZE; x++) {                 //the value
 			for (int i = 0; i < SUDOKU_SIZE; i++) {         //the row
+				StringBuilder clause = new StringBuilder();
 				for (int j = 0; j < SUDOKU_SIZE; j++) { //the column
-					writer.print("" + (i+1) + (j+1) + (x+1) + " ");
+					clause.append("" + (i+1) + (j+1) + (x+1) + " ");
 				}	
-				EndClause(writer);
+				EndClause(strBuilder, clause);
 			}
 		}
 		
@@ -213,15 +192,16 @@ public class SSATS {
 			for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
 				for (int j = 0; j < SUDOKU_SIZE; j++) { //the column
 					for (int y = j+1; y < SUDOKU_SIZE; y++) {
-						 writer.print("-" + (i+1) + (j+1) + (x+1) + " -" + (i+1) + (y+1) + (x+1) + " ");
-						 EndClause(writer);
+						StringBuilder clause = new StringBuilder();
+						clause.append("-" + (i+1) + (j+1) + (x+1) + " -" + (i+1) + (y+1) + (x+1) + " ");
+						EndClause(strBuilder, clause);
 					}
 				}
 			}
 		}
 	}
 	
-	private static void ColumnClauses(PrintWriter writer)
+	private static void ColumnClauses(StringBuilder strBuilder)
 	{
 		/*
 		In the same manner, to show that column 1 contains a 1, we need
@@ -236,10 +216,11 @@ public class SSATS {
 		*/
 		for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
 			for (int i = 0; i < SUDOKU_SIZE; i++) {	    //the column
+				StringBuilder clause = new StringBuilder();
 				for (int j = 0; j < SUDOKU_SIZE; j++) { //the row
-					writer.print("" + (j+1) + (i+1) + (x+1) + " ");
+					clause.append("" + (j+1) + (i+1) + (x+1) + " ");
 				}	
-				EndClause(writer);
+				EndClause(strBuilder, clause);
 			}
 		}
 		
@@ -248,15 +229,16 @@ public class SSATS {
 			for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
 				for (int i = 0; i < SUDOKU_SIZE; i++) { //the column
 					for (int y = i+1; y < SUDOKU_SIZE; y++) {
-						 writer.print("-" + (i+1) + (j+1) + (x+1) + " -" + (y+1) + (j+1) + (x+1) + " ");
-						 EndClause(writer);
+						StringBuilder clause = new StringBuilder();
+						clause.append("-" + (i+1) + (j+1) + (x+1) + " -" + (y+1) + (j+1) + (x+1) + " ");
+						EndClause(strBuilder, clause);
 					}
 				}
 			}
 		}
 	}
 	
-	private static void BlockClauses(PrintWriter writer)
+	private static void BlockClauses(StringBuilder strBuilder)
 	{
 		/*
 		Again, these are similar. For example to show that the top left block contains a 1, we need
@@ -269,12 +251,13 @@ public class SSATS {
 		for (int x = 0; x < SUDOKU_SIZE; x++) {  //the value
 			for (int blocki = 0; blocki < SUDOKU_SIZE_SQRT; blocki++) {
 				for (int blockj = 0; blockj < SUDOKU_SIZE_SQRT; blockj++) {
+					StringBuilder clause = new StringBuilder();
 					for (int i = 0; i < SUDOKU_SIZE_SQRT; i++) {
 						for (int j = 0; j < SUDOKU_SIZE_SQRT; j++) {
-							writer.print("" + (blocki*SUDOKU_SIZE_SQRT + i+1) + (blockj*SUDOKU_SIZE_SQRT + j+1) + (x+1) + " ");
+							clause.append("" + (blocki*SUDOKU_SIZE_SQRT + i+1) + (blockj*SUDOKU_SIZE_SQRT + j+1) + (x+1) + " ");
 						}
 					}
-					EndClause(writer);
+					EndClause(strBuilder, clause);
 				}
 			}
 		}
@@ -286,9 +269,10 @@ public class SSATS {
 					for (int i = 0; i < SUDOKU_SIZE_SQRT; i++) {
 						for (int j = 0; j < SUDOKU_SIZE_SQRT; j++) {
 							for (int y = i*3+j+1; y < SUDOKU_SIZE; y++) {
-								writer.print("-" + (blocki*SUDOKU_SIZE_SQRT + i+1) + (blockj*SUDOKU_SIZE_SQRT + j+1) + (x+1) + 
-									      " -" + (blocki*SUDOKU_SIZE_SQRT + (y/3)+1) + (blockj*SUDOKU_SIZE_SQRT + (y%3)+1) + (x+1) + " ");
-								EndClause(writer);
+								StringBuilder clause = new StringBuilder();
+								clause.append("-" + (blocki*SUDOKU_SIZE_SQRT + i+1) + (blockj*SUDOKU_SIZE_SQRT + j+1) + (x+1) + 
+									          " -" + (blocki*SUDOKU_SIZE_SQRT + (y/3)+1) + (blockj*SUDOKU_SIZE_SQRT + (y%3)+1) + (x+1) + " ");
+								EndClause(strBuilder, clause);
 							}
 						}
 					}
@@ -297,7 +281,7 @@ public class SSATS {
 		}
 	}
 	
-	private static void PreFilledCells(PrintWriter writer, HashMap<String,Integer> puzzleMap)
+	private static void PreFilledCells(StringBuilder strBuilder, HashMap<String,Integer> puzzleMap)
 	{
 		/*
 		This completes the clauses which are the same for every puzzle because they reflect the basic rules 
@@ -309,18 +293,28 @@ public class SSATS {
 		{
 			if (entry.getValue() != 0)
 			{
-				String[] entryLocation = entry.getKey().substring(1,entry.getKey().length()-1).split(",");	//trims the brackets and splits at comma
+				StringBuilder clause = new StringBuilder();
+				
+				//trims the brackets and splits at comma:
+				String[] entryLocation = entry.getKey().substring(1,entry.getKey().length()-1).split(",");
 				String line = entryLocation[0]+entryLocation[1]+entry.getValue()+" ";
-				writer.print(line);
-				EndClause(writer);
+				
+				clause.append(line);
+				EndClause(strBuilder, clause);
 			}
 		}
 	}
 	
-	private static void EndClause(PrintWriter writer)
+	private static void EndClause(StringBuilder strBuilder, StringBuilder clause)
 	{
-		//TODO: replace writer
-		writer.println("0");
+		if (isGSAT) {
+			clause.insert(0, "( ");
+			clause.append(")");
+		} else {
+			clause.append("0");
+		}
+		strBuilder.append(clause.toString()); 	//TODO: check line endings
+		strBuilder.append(System.getProperty("line.separator"));
 		clauseCount++;
 	}
 	
