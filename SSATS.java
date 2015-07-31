@@ -9,6 +9,8 @@ public class SSATS {
 	private static final int SUDOKU_SIZE_SQR = SUDOKU_SIZE*SUDOKU_SIZE;
 	private static final int SUDOKU_SIZE_SQRT = (int)Math.sqrt(SUDOKU_SIZE);
 	
+	private static int clauseCount = 0;
+	
 	public static void main(String[] args) throws IOException {
 		//need to return if no file specified
 		if (args.length != 2) {
@@ -25,22 +27,24 @@ public class SSATS {
 			int puzzleCount = 0;
 			while (s.hasNext())
 			{
+				clauseCount = 0;	//reset clause count
+				
 				String str = s.next(); 
-				char[] myChar = str.toCharArray();
+				char[] inChar = str.toCharArray();
 				
 				//exit if file format isn't right
-				if (myChar.length != SUDOKU_SIZE_SQR)
+				if (inChar.length != SUDOKU_SIZE_SQR)
 				{
 					System.out.println("Error with file format");
 					return;
 				}
 				
-				PrintSudoku(myChar); //to view the map and debug
+				PrintSudoku(inChar); //to view the map and debug
 				
 				//fill map from input file
 				for (int x, i = 0; i < SUDOKU_SIZE; i++) {
 					for (int j = 0; j < SUDOKU_SIZE; j++) {
-						x = Character.getNumericValue(myChar[i*SUDOKU_SIZE+j]);
+						x = Character.getNumericValue(inChar[i*SUDOKU_SIZE+j]);
 						if (x >= 1 && x <= SUDOKU_SIZE) {
 							puzzleMap.put("("+(i+1)+","+(j+1)+")", x);
 						} else {
@@ -56,6 +60,9 @@ public class SSATS {
 				
 				GenerateSATCNF(puzzleMap, outFileName);
 				
+				//now add the formatting to the start of the file
+				FormatPostPass(outFileName);
+				
 				puzzleCount++;
 			}
 		} finally {
@@ -70,15 +77,77 @@ public class SSATS {
 		try {
 			PrintWriter writer = new PrintWriter(fileOutName, "UTF-8");
 			
+			//writer.println("Individual Cell Clauses:");
 			IndividualCellClauses(writer);
+			
+			//writer.println("Row Clauses:");
 			RowClauses(writer);
+			
+			//writer.println("Column Clauses:");
 			ColumnClauses(writer);
+			
+			//writer.println("Block Clauses:");
 			BlockClauses(writer);
+			
+			//writer.println("PreFilled Clauses:");
 			PreFilledCells(writer, puzzleMap);
+			
+			//close the writer to save the file
+			writer.close();
+			
 		} catch (FileNotFoundException e) {
 			System.out.println("writer threw FileNotFound");
 		} catch (UnsupportedEncodingException e) {
 			System.out.println("writer threw UnsupportedEncodingException (UTF-8)");
+		}
+	}
+	
+	private static void FormatPostPass(String fileOutName) throws IOException
+	{
+		/*
+		TODO: intro SAT formatting
+		p cnf <# variables> <# clauses>
+		<list of clauses>
+		ex:
+			c A sample file
+			p cnf 4 3
+			1 3 4 0
+			-1 2 0
+			-3 -4 0
+		*/
+		
+		//read the file back and store it in a StringBuilder
+		Scanner s = null;
+		StringBuilder rebuilder = new StringBuilder();
+		try {
+			s = new Scanner(new BufferedReader(new FileReader(fileOutName)));
+			while (s.hasNextLine())
+			{	
+				rebuilder.append(s.nextLine());
+				rebuilder.append(System.getProperty("line.separator"));
+			}
+		} finally {
+			if (s != null) {
+				s.close();
+			}
+		}
+		
+		//write the formatting info then append the rest
+		PrintWriter postWriter = null;
+		try {
+			postWriter = new PrintWriter(fileOutName, "UTF-8");
+			
+			postWriter.println("c This SAT solution was produced by Sudoku SAT Solver (SSATS),");
+			postWriter.println("c written by Evan Nickerson");
+			postWriter.println("p cnf " + (SUDOKU_SIZE_SQR*SUDOKU_SIZE) + " " + clauseCount);
+			
+			postWriter.print(rebuilder.toString());
+			
+			postWriter.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("postWriter threw FileNotFound");
+		} catch (UnsupportedEncodingException e) {
+			System.out.println("postWriter threw UnsupportedEncodingException (UTF-8)");
 		}
 	}
 	
@@ -93,6 +162,14 @@ public class SSATS {
 
 		These have to be repeated for each of the 81 cells. 
 		*/
+		for (int i = 0; i < SUDOKU_SIZE; i++) {         //the row
+			for (int j = 0; j < SUDOKU_SIZE; j++) {	    //the column
+				for (int x = 0; x < SUDOKU_SIZE; x++) { //the value
+					writer.print("" + (i+1) + (j+1) + (x+1) + " ");
+				}	
+				EndClause(writer);
+			}
+		}
 	}
 	
 	private static void RowClauses(PrintWriter writer)
@@ -111,9 +188,9 @@ public class SSATS {
 		for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
 			for (int i = 0; i < SUDOKU_SIZE; i++) {	    //the row
 				for (int j = 0; j < SUDOKU_SIZE; j++) { //the column
-					System.out.print("" + (i+1) + (j+1) + (x+1) + " ");
+					writer.print("" + (i+1) + (j+1) + (x+1) + " ");
 				}	
-				System.out.println("0");
+				EndClause(writer);
 			}
 		}
 		
@@ -136,9 +213,9 @@ public class SSATS {
 		for (int x = 0; x < SUDOKU_SIZE; x++) {         //the value
 			for (int i = 0; i < SUDOKU_SIZE; i++) {	    //the column
 				for (int j = 0; j < SUDOKU_SIZE; j++) { //the row
-					System.out.print("" + (j+1) + (i+1) + (x+1) + " ");
+					writer.print("" + (j+1) + (i+1) + (x+1) + " ");
 				}	
-				System.out.println("0");
+				EndClause(writer);
 			}
 		}
 		
@@ -156,10 +233,10 @@ public class SSATS {
 				for (int blockj = 0; blockj < SUDOKU_SIZE_SQRT; blockj++) {
 					for (int i = 0; i < SUDOKU_SIZE_SQRT; i++) {
 						for (int j = 0; j < SUDOKU_SIZE_SQRT; j++) {
-							System.out.print("" + (blocki*SUDOKU_SIZE_SQRT + i+1) + (blockj*SUDOKU_SIZE_SQRT + j+1) + (x+1) + " ");
+							writer.print("" + (blocki*SUDOKU_SIZE_SQRT + i+1) + (blockj*SUDOKU_SIZE_SQRT + j+1) + (x+1) + " ");
 						}
 					}
-					System.out.println("0");
+					EndClause(writer);
 				}
 			}
 		}
@@ -180,10 +257,17 @@ public class SSATS {
 			if (entry.getValue() != 0)
 			{
 				String[] entryLocation = entry.getKey().substring(1,entry.getKey().length()-1).split(",");	//trims the brackets and splits at comma
-				String line = entryLocation[0]+entryLocation[1]+entry.getValue()+" 0";
-				System.out.println(line);
+				String line = entryLocation[0]+entryLocation[1]+entry.getValue()+" ";
+				writer.print(line);
+				EndClause(writer);
 			}
 		}
+	}
+	
+	private static void EndClause(PrintWriter writer)
+	{
+		writer.println("0");
+		clauseCount++;
 	}
 	
 	//prints a char array as a formatted sudoku table
