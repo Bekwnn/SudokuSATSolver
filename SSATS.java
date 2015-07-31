@@ -105,7 +105,7 @@ public class SSATS {
 	private static void FormatPostPass(String fileOutName) throws IOException
 	{
 		/*
-		TODO: intro SAT formatting
+		intro SAT formatting
 		p cnf <# variables> <# clauses>
 		<list of clauses>
 		ex:
@@ -115,6 +115,8 @@ public class SSATS {
 			-1 2 0
 			-3 -4 0
 		*/
+		
+		//TODO: replace writer variable with a StringBuilder (and use it here as well)
 		
 		//read the file back and store it in a StringBuilder
 		Scanner s = null;
@@ -170,6 +172,8 @@ public class SSATS {
 				EndClause(writer);
 			}
 		}
+		
+		//TODO: NEGATIVE ENCODINGS!!!
 	}
 	
 	private static void RowClauses(PrintWriter writer)
@@ -266,6 +270,7 @@ public class SSATS {
 	
 	private static void EndClause(PrintWriter writer)
 	{
+		//TODO: replace writer
 		writer.println("0");
 		clauseCount++;
 	}
